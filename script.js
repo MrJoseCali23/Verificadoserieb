@@ -201,3 +201,13 @@ function mostrarMensajeTemp(msg) {
     cuadro.className = 'advertencia';
     mensaje.textContent = msg;
 }
+
+function abrirDonar() {
+    document.getElementById('modal-donar').classList.remove('oculto');
+}
+
+function cerrarDonar(e) {
+    if (!e || e.target === document.getElementById('modal-donar')) {
+        document.getElementById('modal-donar').classList.add('oculto');
+    }
+}

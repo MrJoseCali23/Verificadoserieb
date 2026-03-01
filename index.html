@@ -60,8 +60,18 @@
     <footer>
         <p>Solo para billetes de la <strong>Serie B</strong>.</p>
         <p>Otras series mantienen plena validez.</p>
+        <button id="boton-donar" onclick="abrirDonar()">☕ Apoyar al desarrollador</button>
         <p>By Cali</p>
     </footer>
+
+    <div id="modal-donar" class="modal-overlay oculto" onclick="cerrarDonar(event)">
+        <div class="modal-contenido">
+            <button class="modal-cerrar" onclick="cerrarDonar()">✕</button>
+            <h3>☕ Apoya este proyecto</h3>
+            <p>Escanea el QR para donar</p>
+            <img src="QR.jpeg" alt="QR de donación">
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
