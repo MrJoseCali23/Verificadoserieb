@@ -38,7 +38,7 @@ const canvas        = document.getElementById('canvas');
 const procesando    = document.getElementById('procesando');
 
 (async () => {
-    tesseractWorker = await Tesseract.createWorker('eng', 0); // OEM 0: motor legacy, más rápido para dígitos
+    tesseractWorker = await Tesseract.createWorker('eng'); // LSTM: compatible con Tesseract.js v5
     await tesseractWorker.setParameters({
         tessedit_char_whitelist: '0123456789AB ',
         tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
@@ -155,8 +155,8 @@ function ejecutarValidacion(datoDetectado) {
     const mensaje      = document.getElementById('mensaje-estado');
     const icono        = document.getElementById('icono-estado');
 
-    // Exactamente 9 dígitos seguidos de A o B (formato serie boliviana)
-    const matchBillete = texto.match(/(?<![\d])(\d{9})\s*([AB])(?![\d])/);
+    // 9 dígitos seguidos de A o B, compatible con todos los navegadores móviles
+    const matchBillete = texto.match(/(\d{9})\s*([AB])(?!\d)/);
     if (!matchBillete) { mostrarMensajeTemp('Formato no reconocido. Reintenta.'); return; }
 
     if (matchBillete[0] === ultimoTextoDetectado) return;
