@@ -43,6 +43,10 @@ const procesando    = document.getElementById('procesando');
         tessedit_char_whitelist: '0123456789AB ',
         tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
     });
+    // Calentamiento: primera llamada silenciosa para inicializar el motor WASM
+    const warmCanvas = document.createElement('canvas');
+    warmCanvas.width = 100; warmCanvas.height = 30;
+    await tesseractWorker.recognize(warmCanvas);
     workerListo = true;
     document.getElementById('mensaje-estado').textContent = 'Active la cámara y presione LEER BILLETE';
 })();
@@ -80,13 +84,13 @@ botonCapturar.addEventListener('click', async () => {
     botonCapturar.disabled = true;
     procesando.classList.remove('oculto');
 
-    // 1. Recortar zona guía: franja central del video (65% ancho, 12% alto)
+    // 1. Recortar zona guía: franja central del video (55% ancho, 12% alto)
     //    Franja fina para capturar solo el número de serie y nada más
     const vw = video.videoWidth;
     const vh = video.videoHeight;
-    const cropX = Math.floor(vw * 0.175);
+    const cropX = Math.floor(vw * 0.225);
     const cropY = Math.floor(vh * 0.44);
-    const cropW = Math.floor(vw * 0.65);
+    const cropW = Math.floor(vw * 0.55);
     const cropH = Math.floor(vh * 0.12);
 
     // 2. Escalar x2 el recorte para mejorar precisión de Tesseract
