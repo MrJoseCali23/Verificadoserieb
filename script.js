@@ -99,26 +99,6 @@ botonCapturar.addEventListener('click', async () => {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-    // 3. Preprocesamiento: umbral adaptativo en una sola pasada
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    // Muestreo rápido: 1 de cada 16 píxeles para calcular el promedio de luminosidad
-    let suma = 0, muestras = 0;
-    for (let i = 0; i < data.length; i += 64) { // 64 = 4 canales × 16 píxeles
-        suma += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        muestras++;
-    }
-    const umbral = Math.min(200, Math.max(60, (suma / muestras) - 20));
-
-    // Una sola pasada: binarizar directamente
-    for (let i = 0; i < data.length; i += 4) {
-        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        const bin = lum < umbral ? 0 : 255;
-        data[i] = data[i + 1] = data[i + 2] = bin;
-    }
-    ctx.putImageData(imageData, 0, 0);
-
     try {
         const { data: { text } } = await tesseractWorker.recognize(canvas);
         if (text.trim()) {
