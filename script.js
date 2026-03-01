@@ -38,7 +38,7 @@ const canvas        = document.getElementById('canvas');
 const procesando    = document.getElementById('procesando');
 
 (async () => {
-    tesseractWorker = await Tesseract.createWorker('eng');
+    tesseractWorker = await Tesseract.createWorker('eng', 0); // OEM 0: motor legacy, más rápido para dígitos
     await tesseractWorker.setParameters({
         tessedit_char_whitelist: '0123456789AB ',
         tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
@@ -93,10 +93,9 @@ botonCapturar.addEventListener('click', async () => {
     const cropW = Math.floor(vw * 0.55);
     const cropH = Math.floor(vh * 0.12);
 
-    // 2. Escalar x2 el recorte para mejorar precisión de Tesseract
-    const escala = 2;
-    canvas.width  = cropW * escala;
-    canvas.height = cropH * escala;
+    // 2. Sin escala extra — 12% de 720px = ~86px de alto, suficiente para OCR
+    canvas.width  = cropW;
+    canvas.height = cropH;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
