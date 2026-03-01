@@ -155,8 +155,7 @@ function ejecutarValidacion(datoDetectado) {
     const mensaje      = document.getElementById('mensaje-estado');
     const icono        = document.getElementById('icono-estado');
 
-    // 9 dígitos seguidos de A o B, compatible con todos los navegadores móviles
-    const matchBillete = texto.match(/(\d{9})\s*([AB])(?!\d)/);
+    const matchBillete = texto.match(/(\d{8,10})\s*([AB])/);
     if (!matchBillete) { mostrarMensajeTemp('Formato no reconocido. Reintenta.'); return; }
 
     if (matchBillete[0] === ultimoTextoDetectado) return;
