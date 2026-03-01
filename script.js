@@ -95,12 +95,28 @@ botonCapturar.addEventListener('click', async () => {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-    // 3. Preprocesamiento: escala de grises + binarización por umbral
+    // 3. Preprocesamiento: luminosidad estándar + umbral adaptativo
+    //    Números negros (luminosidad baja) sobre fondo naranja/colorido (luminosidad alta)
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
+    const lum = new Float32Array(data.length / 4);
+
+    // Paso 1: calcular luminosidad por píxel y acumular para umbral
+    let suma = 0;
     for (let i = 0; i < data.length; i += 4) {
-        const gris = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        const bin  = gris > 128 ? 255 : 0;
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        const l = 0.299 * r + 0.587 * g + 0.114 * b;
+        lum[i / 4] = l;
+        suma += l;
+    }
+
+    // Paso 2: umbral adaptativo = promedio - offset (texto negro está bajo el promedio)
+    const promedio = suma / lum.length;
+    const umbral = Math.min(200, Math.max(60, promedio - 20));
+
+    // Paso 3: binarizar — píxel oscuro (texto) → negro, píxel claro (fondo) → blanco
+    for (let i = 0; i < data.length; i += 4) {
+        const bin = lum[i / 4] < umbral ? 0 : 255;
         data[i] = data[i + 1] = data[i + 2] = bin;
     }
     ctx.putImageData(imageData, 0, 0);
