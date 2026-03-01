@@ -10,13 +10,12 @@
 <body>
     <header>
         <div class="logo-container">
-            <h1>Validador de Emergencia</h1>
+            <h1>Validador de Billetes Serie B</h1>
         </div>
         <p class="subtitulo">Billetes Serie B - Comunicado CP9/2026</p>
     </header>
 
     <main>
-        <!-- Contador -->
         <div id="contador">
             <div class="cnt valido-cnt">✅ <span id="cnt-validos">0</span> Válidos</div>
             <div class="cnt peligro-cnt">❌ <span id="cnt-invalidos">0</span> Inválidos</div>
@@ -38,14 +37,19 @@
         </div>
 
         <div class="acciones">
-            <button id="boton-escanear">ENCENDER CÁMARA</button>
-            <button id="boton-capturar" disabled>📷 CAPTURAR</button>
+            <div class="switch-container">
+                <span class="switch-label">Cámara</span>
+                <label class="switch">
+                    <input type="checkbox" id="switch-camara">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button id="boton-capturar" disabled>LEER BILLETE</button>
             <button id="boton-linterna" disabled>🔦 LINTERNA</button>
-            <button id="boton-apagar" disabled>APAGAR CÁMARA</button>
             <button id="boton-manual" onclick="verificarManual()">Ingreso Manual</button>
         </div>
 
-        <!-- Historial -->
         <div id="historial-container">
             <h3>Historial de escaneos</h3>
             <button id="boton-limpiar" onclick="limpiarHistorial()">Limpiar</button>
