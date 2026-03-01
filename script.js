@@ -24,7 +24,26 @@ const rangosInvalidos = [
     { corte: "10", desde: 108050001, hasta: 108500000 }, { corte: "10", desde: 109400001, hasta: 109850000 }
 ];
 
-const html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start(
+    { facingMode: "environment" }, 
+    { 
+        fps: 20, // Aumentamos los cuadros por segundo para captar mejor el movimiento
+        qrbox: { width: 280, height: 80 }, // Hacemos el cuadro más pequeño para forzar el enfoque en la serie
+        aspectRatio: 1.777778 // Formato panorámico para móviles
+    }, 
+    (decodedText) => {
+        // Log para ver en la consola de la PC qué está leyendo realmente
+        console.log("Texto detectado:", decodedText); 
+        
+        const match = decodedText.match(/\d{7,8}/); // Busca grupos de 7 u 8 números
+        if (match) {
+            ejecutarValidacion(parseInt(match[0]));
+            // Detenemos el escaneo un momento para mostrar el resultado
+            html5QrCode.pause(true); 
+            setTimeout(() => html5QrCode.resume(), 3000); 
+        }
+    }
+).catch(err => console.error(err));
 
 // Iniciar Escáner
 document.getElementById('boton-escanear').addEventListener('click', () => {
@@ -60,13 +79,23 @@ function verificarManual() {
     }
 }
 
-// Motor de Validación Único
-function ejecutarValidacion(numeroSerie) {
-    const corteSeleccionado = document.getElementById('corte-seleccionado').value;
-    const resultadoDiv = document.getElementById('resultado-cuadro');
-    const mensaje = document.getElementById('mensaje-estado');
+function ejecutarValidacion(textoEscaneado) {
+    // Convertimos a mayúsculas para evitar errores
+    const texto = textoEscaneado.toUpperCase();
+    
+    // Si el texto contiene una 'A', es válido por defecto
+    if (texto.includes('A')) {
+        mostrarResultadoValido("Billete Serie A: Plena validez legal.");
+        return;
+    }
 
-    // Buscamos coincidencia en la lista negra
+    // Si es Serie B, extraemos los números para comparar con las tablas del BCB
+    const matchDeditos = texto.match(/\d{8}/);
+    if (!matchDeditos) return;
+
+    const numeroSerie = parseInt(matchDeditos[0]);
+    const corteSeleccionado = document.getElementById('corte-seleccionado').value;
+
     const esInhabilitado = rangosInvalidos.find(r => 
         r.corte === corteSeleccionado && 
         numeroSerie >= r.desde && 
@@ -74,13 +103,8 @@ function ejecutarValidacion(numeroSerie) {
     );
 
     if (esInhabilitado) {
-        resultadoDiv.className = "peligro"; 
-        mensaje.innerHTML = `❌ <b>BILLETE INHABILITADO</b><br>Serie ${numeroSerie} (Corte Bs${corteSeleccionado})<br>No tiene valor legal según el BCB.`;
-        
-        // Vibración de alerta en móviles
-        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+        renderizarAlerta(numeroSerie, corteSeleccionado);
     } else {
-        resultadoDiv.className = "valido";
-        mensaje.innerHTML = `✅ <b>BILLETE VÁLIDO</b><br>Serie ${numeroSerie}<br>No se encuentra en los registros de billetes sustraídos.`;
+        mostrarResultadoValido(`Serie B - Nº ${numeroSerie}: Billete Autorizado.`);
     }
 }

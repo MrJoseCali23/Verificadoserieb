@@ -59,8 +59,7 @@ select {
     background: #000;
 }
 
-/* Guía visual sobre la cámara */
-/* Guía visual mejorada: Centro transparente, bordes con sombra suave */
+
 .camera-guide {
     position: absolute;
     top: 50%;
@@ -68,19 +67,16 @@ select {
     transform: translate(-50%, -50%);
     width: 85%; /* Un poco más ancho para ver mejor */
     height: 30%;
-    /* Quitamos el box-shadow de 5000px que causaba el efecto opaco */
     border: 4px solid #ffffff; 
     border-radius: 12px;
     pointer-events: none;
     z-index: 10;
-    /* Añadimos un brillo sutil solo al borde para que resalte */
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
 }
 
-/* Oscurecemos solo un poco el fondo del lector para que resalte la cámara */
 #reader {
     background-color: #000;
-    filter: none !important; /* Forzamos a que no haya desenfoque */
+    filter: none !important; 
 }
 /* Resultados */
 #resultado-cuadro {
