@@ -102,7 +102,9 @@ botonCapturar.addEventListener('click', async () => {
     try {
         const { data: { text } } = await tesseractWorker.recognize(canvas);
         if (text.trim()) {
-            ejecutarValidacion(text);
+            // DEBUG: muestra el texto crudo que leyó Tesseract
+            mostrarMensajeTemp('OCR: ' + text.trim().substring(0, 40));
+            setTimeout(() => ejecutarValidacion(text), 1500);
         } else {
             mostrarMensajeTemp('No se detectó texto. Reintenta.');
         }
