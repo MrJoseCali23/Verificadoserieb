@@ -1,4 +1,3 @@
-// Base de datos oficial extraída de los comunicados CP9/2026
 const rangosInvalidos = [
     // Corte Bs50
     { corte: "50", desde: 67250001, hasta: 67700000 }, { corte: "50", desde: 69050001, hasta: 69500000 },
@@ -24,76 +23,43 @@ const rangosInvalidos = [
     { corte: "10", desde: 108050001, hasta: 108500000 }, { corte: "10", desde: 109400001, hasta: 109850000 }
 ];
 
-html5QrCode.start(
-    { facingMode: "environment" }, 
-    { 
-        fps: 20, // Aumentamos los cuadros por segundo para captar mejor el movimiento
-        qrbox: { width: 280, height: 80 }, // Hacemos el cuadro más pequeño para forzar el enfoque en la serie
-        aspectRatio: 1.777778 // Formato panorámico para móviles
-    }, 
-    (decodedText) => {
-        // Log para ver en la consola de la PC qué está leyendo realmente
-        console.log("Texto detectado:", decodedText); 
-        
-        const match = decodedText.match(/\d{7,8}/); // Busca grupos de 7 u 8 números
-        if (match) {
-            ejecutarValidacion(parseInt(match[0]));
-            // Detenemos el escaneo un momento para mostrar el resultado
-            html5QrCode.pause(true); 
-            setTimeout(() => html5QrCode.resume(), 3000); 
-        }
-    }
-).catch(err => console.error(err));
+const html5QrCode = new Html5Qrcode("reader");
 
-// Iniciar Escáner
 document.getElementById('boton-escanear').addEventListener('click', () => {
-    const config = { fps: 15, qrbox: { width: 300, height: 120 } };
+    const config = { 
+        fps: 20, 
+        qrbox: { width: 280, height: 100 },
+        aspectRatio: 1.777778 
+    };
     
     html5QrCode.start(
         { facingMode: "environment" }, 
         config, 
         (decodedText) => {
-            // Buscamos un patrón de 8 números seguidos en la lectura
-            const match = decodedText.match(/\d{8}/);
-            if (match) {
-                ejecutarValidacion(parseInt(match[0]));
-            }
+            ejecutarValidacion(decodedText);
         }
     ).catch(err => {
-        console.error(err);
-        alert("Error: Asegúrate de usar HTTPS o configurar los permisos de cámara.");
+        alert("Error: Activa el HTTPS o los permisos de cámara.");
     });
 });
 
-// Función para Ingreso Manual
-function verificarManual() {
-    const num = prompt("Ingresa los 8 dígitos del número de serie:");
-    if (num) {
-        // Limpiamos el texto para dejar solo números
-        const soloNumeros = num.replace(/\D/g, "");
-        if (soloNumeros.length >= 7) {
-            ejecutarValidacion(parseInt(soloNumeros));
-        } else {
-            alert("El número de serie debe tener al menos 7 u 8 dígitos.");
-        }
-    }
-}
+function ejecutarValidacion(textoDetectado) {
+    const texto = textoDetectado.toUpperCase();
+    const resultadoDiv = document.getElementById('resultado-cuadro');
+    const mensaje = document.getElementById('mensaje-estado');
 
-function ejecutarValidacion(textoEscaneado) {
-    // Convertimos a mayúsculas para evitar errores
-    const texto = textoEscaneado.toUpperCase();
-    
-    // Si el texto contiene una 'A', es válido por defecto
+    // 1. Identificar Serie A (Válido por defecto)
     if (texto.includes('A')) {
-        mostrarResultadoValido("Billete Serie A: Plena validez legal.");
+        resultadoDiv.className = "valido";
+        mensaje.innerHTML = `✅ <b>SERIE A: BILLETE VÁLIDO</b><br>Todos los billetes Serie A son legales.`;
         return;
     }
 
-    // Si es Serie B, extraemos los números para comparar con las tablas del BCB
-    const matchDeditos = texto.match(/\d{8}/);
-    if (!matchDeditos) return;
+    // 2. Identificar Serie B y extraer números
+    const matchNumeros = texto.match(/\d{7,8}/);
+    if (!matchNumeros) return; // Si no hay números, seguimos buscando
 
-    const numeroSerie = parseInt(matchDeditos[0]);
+    const numeroSerie = parseInt(matchNumeros[0]);
     const corteSeleccionado = document.getElementById('corte-seleccionado').value;
 
     const esInhabilitado = rangosInvalidos.find(r => 
@@ -103,8 +69,16 @@ function ejecutarValidacion(textoEscaneado) {
     );
 
     if (esInhabilitado) {
-        renderizarAlerta(numeroSerie, corteSeleccionado);
+        resultadoDiv.className = "peligro";
+        mensaje.innerHTML = `❌ <b>SIN VALOR LEGAL</b><br>Serie B: ${numeroSerie}<br>Corte Bs${corteSeleccionado} inhabilitado.`;
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
     } else {
-        mostrarResultadoValido(`Serie B - Nº ${numeroSerie}: Billete Autorizado.`);
+        resultadoDiv.className = "valido";
+        mensaje.innerHTML = `✅ <b>SERIE B: VÁLIDO</b><br>Nº ${numeroSerie}<br>Fuera de las series del accidente.`;
     }
+}
+
+function verificarManual() {
+    const num = prompt("Ingresa el número de serie (ej: 76310020 B):");
+    if (num) ejecutarValidacion(num);
 }
