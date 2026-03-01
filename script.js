@@ -38,15 +38,8 @@ const canvas        = document.getElementById('canvas');
 const procesando    = document.getElementById('procesando');
 
 (async () => {
-    tesseractWorker = await Tesseract.createWorker('eng'); // LSTM: compatible con Tesseract.js v5
-    await tesseractWorker.setParameters({
-        tessedit_char_whitelist: '0123456789AB ',
-        tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
-    });
-    // Calentamiento: primera llamada silenciosa para inicializar el motor WASM
-    const warmCanvas = document.createElement('canvas');
-    warmCanvas.width = 100; warmCanvas.height = 30;
-    await tesseractWorker.recognize(warmCanvas);
+    tesseractWorker = await Tesseract.createWorker('eng');
+    await tesseractWorker.setParameters({ tessedit_char_whitelist: '0123456789AB ' });
     workerListo = true;
     document.getElementById('mensaje-estado').textContent = 'Active la cámara y presione LEER BILLETE';
 })();
@@ -83,28 +76,20 @@ botonCapturar.addEventListener('click', async () => {
     if (!escaneando || !workerListo) return;
     botonCapturar.disabled = true;
     procesando.classList.remove('oculto');
-
-    // 1. Recortar zona guía: franja central del video (55% ancho, 12% alto)
-    //    Franja fina para capturar solo el número de serie y nada más
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     const cropX = Math.floor(vw * 0.225);
-    const cropY = Math.floor(vh * 0.42);
+    const cropY = Math.floor(vh * 0.44);
     const cropW = Math.floor(vw * 0.55);
-    const cropH = Math.floor(vh * 0.16);
-
-    // Escalar x2: más píxeles = Tesseract lee mejor números pequeños
+    const cropH = Math.floor(vh * 0.12);
     canvas.width  = cropW * 2;
     canvas.height = cropH * 2;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
     try {
         const { data: { text } } = await tesseractWorker.recognize(canvas);
         if (text.trim()) {
-            // DEBUG: muestra el texto crudo que leyó Tesseract
-            mostrarMensajeTemp('OCR: ' + text.trim().substring(0, 40));
-            setTimeout(() => ejecutarValidacion(text), 1500);
+            ejecutarValidacion(text);
         } else {
             mostrarMensajeTemp('No se detectó texto. Reintenta.');
         }
