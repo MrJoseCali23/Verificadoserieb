@@ -24,69 +24,119 @@ const rangosInvalidos = [
     { corte: "10", desde: 108050001, hasta: 108500000 }, { corte: "10", desde: 109400001, hasta: 109850000 }
 ];
 
-const html5QrCode = new Html5Qrcode("reader");
+let streamActivo = null;
+let escaneando = false;
+let timerEscaneo = null;
+let ultimoTextoDetectado = null;
 
-// Iniciar Escáner con optimización para texto (OCR)
-document.getElementById('boton-escanear').addEventListener('click', () => {
-    const config = { 
-        fps: 30, 
-        qrbox: { width: 280, height: 100 },
-        aspectRatio: 1.777778 
-    };
-    
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        config, 
-        (decodedText) => {
-            // El motor detecta el texto del billete
-            ejecutarValidacion(decodedText);
-        }
-    ).catch(err => {
+const botonEncender = document.getElementById('boton-escanear');
+const botonApagar   = document.getElementById('boton-apagar');
+const video  = document.getElementById('reader');
+const canvas = document.getElementById('canvas');
+
+// ── Encender cámara ──────────────────────────────────────────────
+botonEncender.addEventListener('click', async () => {
+    if (escaneando) return;
+    try {
+        streamActivo = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
+        video.srcObject = streamActivo;
+        escaneando = true;
+        botonEncender.disabled = true;
+        botonApagar.disabled = false;
+        iniciarBucleEscaneo();
+    } catch (err) {
         alert("Permisos de cámara denegados. Use HTTPS o configure chrome://flags.");
-    });
+    }
 });
 
-// Función para Ingreso Manual (Muy importante si la cámara no enfoca)
-function verificarManual() {
-    const entrada = prompt("Ingrese el número y serie (ej: 170820478 A):");
-    if (entrada) {
-        ejecutarValidacion(entrada);
+// ── Apagar cámara ────────────────────────────────────────────────
+botonApagar.addEventListener('click', () => {
+    detenerEscaneo();
+});
+
+function detenerEscaneo() {
+    if (streamActivo) {
+        streamActivo.getTracks().forEach(t => t.stop());
+        streamActivo = null;
     }
+    escaneando = false;
+    clearTimeout(timerEscaneo);
+    video.srcObject = null;
+    ultimoTextoDetectado = null;
+    botonEncender.disabled = false;
+    botonApagar.disabled = true;
 }
 
-// Lógica de Validación Unificada
+// ── Bucle de escaneo con debounce (cada 1500ms) ──────────────────
+function iniciarBucleEscaneo() {
+    if (!escaneando) return;
+    timerEscaneo = setTimeout(async () => {
+        await capturarYLeer();
+        iniciarBucleEscaneo();
+    }, 1500);
+}
+
+async function capturarYLeer() {
+    if (!escaneando || video.readyState < 2) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    try {
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+            tessedit_char_whitelist: '0123456789AB '
+        });
+        if (text.trim()) ejecutarValidacion(text);
+    } catch (e) { /* continuar silenciosamente */ }
+}
+
+// ── Ingreso Manual ───────────────────────────────────────────────
+function verificarManual() {
+    const entrada = prompt("Ingrese el número y serie (ej: 12345678 B):");
+    if (entrada) ejecutarValidacion(entrada);
+}
+
+// ── Validación Unificada ─────────────────────────────────────────
 function ejecutarValidacion(datoDetectado) {
     const texto = datoDetectado.toUpperCase();
     const resultadoDiv = document.getElementById('resultado-cuadro');
-    const mensaje = document.getElementById('mensaje-estado');
+    const mensaje      = document.getElementById('mensaje-estado');
+    const icono        = document.getElementById('icono-estado');
 
-    // 1. Detectar si es Serie A (Válido de inmediato)
-    if (texto.includes('A')) {
+    // Formato esperado: XXXXXXXX A/B
+    const matchBillete = texto.match(/(\d{8})\s*([AB])/);
+    if (!matchBillete) return;
+
+    // Debounce: ignorar si ya se procesó este mismo número
+    if (matchBillete[0] === ultimoTextoDetectado) return;
+    ultimoTextoDetectado = matchBillete[0];
+
+    const numeroSerie = parseInt(matchBillete[1]);
+    const serie = matchBillete[2];
+
+    // 1. Serie A → siempre válido
+    if (serie === 'A') {
+        icono.textContent = '✅';
         resultadoDiv.className = "valido";
-        mensaje.innerHTML = `✅ <b>SERIE A: BILLETE VÁLIDO</b><br>Toda la Serie A mantiene plena validez legal.`;
+        mensaje.innerHTML = `<b>SERIE A: BILLETE VÁLIDO</b><br>Nº ${numeroSerie}<br>Toda la Serie A mantiene plena validez legal.`;
         return;
     }
 
-    // 2. Si no es A, buscamos los números de la Serie B
-    const matchNumeros = texto.match(/\d{7,8}/);
-    if (!matchNumeros) return; // Seguimos escaneando si no vemos números
-
-    const numeroSerie = parseInt(matchNumeros[0]);
-    const corteSeleccionado = document.getElementById('corte-seleccionado').value;
-
-    // 3. Comparar con la base de datos del siniestro
-    const esInhabilitado = rangosInvalidos.find(r => 
-        r.corte === corteSeleccionado && 
-        numeroSerie >= r.desde && 
-        numeroSerie <= r.hasta
+    // 2. Serie B → buscar en TODOS los cortes (auto-detección)
+    const rangoEncontrado = rangosInvalidos.find(r =>
+        numeroSerie >= r.desde && numeroSerie <= r.hasta
     );
 
-    if (esInhabilitado) {
+    if (rangoEncontrado) {
+        icono.textContent = '❌';
         resultadoDiv.className = "peligro";
-        mensaje.innerHTML = `❌ <b>SIN VALOR LEGAL</b><br>Corte Bs${corteSeleccionado} - Nº ${numeroSerie}<br>Serie B inhabilitada por el BCB.`;
-        if (navigator.vibrate) navigator.vibrate([300, 100, 300]); // Alerta física
+        mensaje.innerHTML = `<b>SIN VALOR LEGAL</b><br>Corte Bs${rangoEncontrado.corte} - Nº ${numeroSerie}<br>Serie B inhabilitada por el BCB.`;
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
     } else {
+        icono.textContent = '✅';
         resultadoDiv.className = "valido";
-        mensaje.innerHTML = `✅ <b>SERIE B: AUTORIZADA</b><br>Nº ${numeroSerie}<br>No se encuentra en el lote sustraído.`;
+        mensaje.innerHTML = `<b>SERIE B: AUTORIZADA</b><br>Nº ${numeroSerie}<br>No se encuentra en el lote sustraído.`;
     }
 }

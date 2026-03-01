@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificador BCB - Serie B Inhabilitada</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
     <header>
         <div class="logo-container">
-            <img src="https://www.bcb.gob.bo/sites/default/files/logo_bcb.png" alt="BCB" class="logo-mini">
             <h1>Validador de Emergencia</h1>
         </div>
         <p class="subtitulo">Billetes Serie B - Comunicado CP9/2026</p>
@@ -20,14 +19,15 @@
         <div class="control-panel">
             <label for="corte-seleccionado">Tipo de billete:</label>
             <select id="corte-seleccionado">
-                <option value="10">Bs10 (Azul)</option>
-                <option value="20">Bs20 (Naranja)</option>
-                <option value="50" selected>Bs50 (Violeta)</option>
+                <option value="10">Bs10 </option>
+                <option value="20">Bs20 </option>
+                <option value="50" selected>Bs50 </option>
             </select>
         </div>
 
         <div id="reader-wrapper">
-            <div id="reader"></div>
+            <video id="reader" autoplay playsinline muted></video>
+            <canvas id="canvas" style="display:none"></canvas>
             <div class="camera-guide"></div>
         </div>
 
@@ -41,6 +41,7 @@
 
         <div class="acciones">
             <button id="boton-escanear">ENCENDER CÁMARA</button>
+            <button id="boton-apagar" disabled>APAGAR CÁMARA</button>
             <button id="boton-manual" onclick="verificarManual()">Ingreso Manual</button>
         </div>
     </main>
@@ -48,6 +49,7 @@
     <footer>
         <p>Solo para billetes de la <strong>Serie B</strong>.</p>
         <p>Otras series mantienen plena validez.</p>
+        <p>By Cali</p>
     </footer>
 
     <script src="script.js"></script>
