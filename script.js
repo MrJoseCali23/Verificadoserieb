@@ -80,13 +80,14 @@ botonCapturar.addEventListener('click', async () => {
     botonCapturar.disabled = true;
     procesando.classList.remove('oculto');
 
-    // 1. Recortar zona guía: franja central del video (85% ancho, 30% alto)
+    // 1. Recortar zona guía: franja central del video (85% ancho, 12% alto)
+    //    Franja fina para capturar solo el número de serie y nada más
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     const cropX = Math.floor(vw * 0.075);
-    const cropY = Math.floor(vh * 0.35);
+    const cropY = Math.floor(vh * 0.44);
     const cropW = Math.floor(vw * 0.85);
-    const cropH = Math.floor(vh * 0.30);
+    const cropH = Math.floor(vh * 0.12);
 
     // 2. Escalar x2 el recorte para mejorar precisión de Tesseract
     const escala = 2;
@@ -151,7 +152,8 @@ function ejecutarValidacion(datoDetectado) {
     const mensaje      = document.getElementById('mensaje-estado');
     const icono        = document.getElementById('icono-estado');
 
-    const matchBillete = texto.match(/(\d{8,10})\s*([AB])/);
+    // Exactamente 9 dígitos seguidos de A o B (formato serie boliviana)
+    const matchBillete = texto.match(/(?<![\d])(\d{9})\s*([AB])(?![\d])/);
     if (!matchBillete) { mostrarMensajeTemp('Formato no reconocido. Reintenta.'); return; }
 
     if (matchBillete[0] === ultimoTextoDetectado) return;
