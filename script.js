@@ -40,6 +40,10 @@ const procesando    = document.getElementById('procesando');
 (async () => {
     tesseractWorker = await Tesseract.createWorker('eng');
     await tesseractWorker.setParameters({ tessedit_char_whitelist: '0123456789AB ' });
+    // Calentamiento silencioso: paga el costo de arranque antes de la primera lectura real
+    const warmCanvas = document.createElement('canvas');
+    warmCanvas.width = 100; warmCanvas.height = 30;
+    await tesseractWorker.recognize(warmCanvas);
     workerListo = true;
     document.getElementById('mensaje-estado').textContent = 'Active la cámara y presione LEER BILLETE';
 })();
