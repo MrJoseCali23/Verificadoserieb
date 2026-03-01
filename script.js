@@ -39,7 +39,10 @@ const procesando    = document.getElementById('procesando');
 
 (async () => {
     tesseractWorker = await Tesseract.createWorker('eng');
-    await tesseractWorker.setParameters({ tessedit_char_whitelist: '0123456789AB ' });
+    await tesseractWorker.setParameters({
+        tessedit_char_whitelist: '0123456789AB ',
+        tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
+    });
     workerListo = true;
     document.getElementById('mensaje-estado').textContent = 'Active la cámara y presione LEER BILLETE';
 })();
@@ -76,10 +79,32 @@ botonCapturar.addEventListener('click', async () => {
     if (!escaneando || !workerListo) return;
     botonCapturar.disabled = true;
     procesando.classList.remove('oculto');
+
+    // 1. Recortar zona guía: franja central del video (85% ancho, 30% alto)
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const cropX = Math.floor(vw * 0.075);
+    const cropY = Math.floor(vh * 0.35);
+    const cropW = Math.floor(vw * 0.85);
+    const cropH = Math.floor(vh * 0.30);
+
+    // 2. Escalar x2 el recorte para mejorar precisión de Tesseract
+    const escala = 2;
+    canvas.width  = cropW * escala;
+    canvas.height = cropH * escala;
     const ctx = canvas.getContext('2d');
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+    // 3. Preprocesamiento: escala de grises + binarización por umbral
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        const gris = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const bin  = gris > 128 ? 255 : 0;
+        data[i] = data[i + 1] = data[i + 2] = bin;
+    }
+    ctx.putImageData(imageData, 0, 0);
+
     try {
         const { data: { text } } = await tesseractWorker.recognize(canvas);
         if (text.trim()) {
