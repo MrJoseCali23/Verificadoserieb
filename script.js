@@ -80,13 +80,13 @@ botonCapturar.addEventListener('click', async () => {
     botonCapturar.disabled = true;
     procesando.classList.remove('oculto');
 
-    // 1. Recortar zona guía: franja central del video (85% ancho, 12% alto)
+    // 1. Recortar zona guía: franja central del video (65% ancho, 12% alto)
     //    Franja fina para capturar solo el número de serie y nada más
     const vw = video.videoWidth;
     const vh = video.videoHeight;
-    const cropX = Math.floor(vw * 0.075);
+    const cropX = Math.floor(vw * 0.175);
     const cropY = Math.floor(vh * 0.44);
-    const cropW = Math.floor(vw * 0.85);
+    const cropW = Math.floor(vw * 0.65);
     const cropH = Math.floor(vh * 0.12);
 
     // 2. Escalar x2 el recorte para mejorar precisión de Tesseract
