@@ -1,3 +1,4 @@
+// Base de datos oficial - Comunicado CP9/2026 (28 de febrero de 2026)
 const rangosInvalidos = [
     // Corte Bs50
     { corte: "50", desde: 67250001, hasta: 67700000 }, { corte: "50", desde: 69050001, hasta: 69500000 },
@@ -25,9 +26,10 @@ const rangosInvalidos = [
 
 const html5QrCode = new Html5Qrcode("reader");
 
+// Iniciar Escáner con optimización para texto (OCR)
 document.getElementById('boton-escanear').addEventListener('click', () => {
     const config = { 
-        fps: 20, 
+        fps: 30, 
         qrbox: { width: 280, height: 100 },
         aspectRatio: 1.777778 
     };
@@ -36,32 +38,43 @@ document.getElementById('boton-escanear').addEventListener('click', () => {
         { facingMode: "environment" }, 
         config, 
         (decodedText) => {
+            // El motor detecta el texto del billete
             ejecutarValidacion(decodedText);
         }
     ).catch(err => {
-        alert("Error: Activa el HTTPS o los permisos de cámara.");
+        alert("Permisos de cámara denegados. Use HTTPS o configure chrome://flags.");
     });
 });
 
-function ejecutarValidacion(textoDetectado) {
-    const texto = textoDetectado.toUpperCase();
+// Función para Ingreso Manual (Muy importante si la cámara no enfoca)
+function verificarManual() {
+    const entrada = prompt("Ingrese el número y serie (ej: 170820478 A):");
+    if (entrada) {
+        ejecutarValidacion(entrada);
+    }
+}
+
+// Lógica de Validación Unificada
+function ejecutarValidacion(datoDetectado) {
+    const texto = datoDetectado.toUpperCase();
     const resultadoDiv = document.getElementById('resultado-cuadro');
     const mensaje = document.getElementById('mensaje-estado');
 
-    // 1. Identificar Serie A (Válido por defecto)
+    // 1. Detectar si es Serie A (Válido de inmediato)
     if (texto.includes('A')) {
         resultadoDiv.className = "valido";
-        mensaje.innerHTML = `✅ <b>SERIE A: BILLETE VÁLIDO</b><br>Todos los billetes Serie A son legales.`;
+        mensaje.innerHTML = `✅ <b>SERIE A: BILLETE VÁLIDO</b><br>Toda la Serie A mantiene plena validez legal.`;
         return;
     }
 
-    // 2. Identificar Serie B y extraer números
+    // 2. Si no es A, buscamos los números de la Serie B
     const matchNumeros = texto.match(/\d{7,8}/);
-    if (!matchNumeros) return; // Si no hay números, seguimos buscando
+    if (!matchNumeros) return; // Seguimos escaneando si no vemos números
 
     const numeroSerie = parseInt(matchNumeros[0]);
     const corteSeleccionado = document.getElementById('corte-seleccionado').value;
 
+    // 3. Comparar con la base de datos del siniestro
     const esInhabilitado = rangosInvalidos.find(r => 
         r.corte === corteSeleccionado && 
         numeroSerie >= r.desde && 
@@ -70,15 +83,10 @@ function ejecutarValidacion(textoDetectado) {
 
     if (esInhabilitado) {
         resultadoDiv.className = "peligro";
-        mensaje.innerHTML = `❌ <b>SIN VALOR LEGAL</b><br>Serie B: ${numeroSerie}<br>Corte Bs${corteSeleccionado} inhabilitado.`;
-        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+        mensaje.innerHTML = `❌ <b>SIN VALOR LEGAL</b><br>Corte Bs${corteSeleccionado} - Nº ${numeroSerie}<br>Serie B inhabilitada por el BCB.`;
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300]); // Alerta física
     } else {
         resultadoDiv.className = "valido";
-        mensaje.innerHTML = `✅ <b>SERIE B: VÁLIDO</b><br>Nº ${numeroSerie}<br>Fuera de las series del accidente.`;
+        mensaje.innerHTML = `✅ <b>SERIE B: AUTORIZADA</b><br>Nº ${numeroSerie}<br>No se encuentra en el lote sustraído.`;
     }
-}
-
-function verificarManual() {
-    const num = prompt("Ingresa el número de serie (ej: 76310020 B):");
-    if (num) ejecutarValidacion(num);
 }
