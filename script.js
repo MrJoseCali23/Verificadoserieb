@@ -41,7 +41,7 @@ const procesando    = document.getElementById('procesando');
     tesseractWorker = await Tesseract.createWorker('eng'); // LSTM: compatible con Tesseract.js v5
     await tesseractWorker.setParameters({
         tessedit_char_whitelist: '0123456789AB ',
-        tessedit_pageseg_mode: '13'  // PSM 13: línea cruda, sin análisis de layout
+        tessedit_pageseg_mode: '7'   // PSM 7: una sola línea de texto
     });
     // Calentamiento: primera llamada silenciosa para inicializar el motor WASM
     const warmCanvas = document.createElement('canvas');
