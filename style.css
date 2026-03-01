@@ -53,10 +53,13 @@ select {
 
 #reader {
     width: 100%;
+    height: 220px;
     border-radius: 15px;
     overflow: hidden;
     border: 4px solid #2c3e50;
     background: #000;
+    object-fit: cover;
+    display: block;
 }
 
 
@@ -74,10 +77,6 @@ select {
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
 }
 
-#reader {
-    background-color: #000;
-    filter: none !important; 
-}
 /* Resultados */
 #resultado-cuadro {
     width: 85%;

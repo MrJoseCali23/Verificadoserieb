@@ -42,6 +42,7 @@ botonEncender.addEventListener('click', async () => {
             video: { facingMode: "environment" }
         });
         video.srcObject = streamActivo;
+        await video.play();
         escaneando = true;
         botonEncender.disabled = true;
         botonApagar.disabled = false;
