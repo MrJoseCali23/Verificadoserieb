@@ -158,9 +158,129 @@ select {
     cursor: pointer;
 }
 
+/* Botón CAPTURAR */
+#boton-capturar {
+    background-color: #2980b9;
+    color: white;
+    padding: 18px 40px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    width: 80%;
+    max-width: 300px;
+    box-shadow: 0 4px 15px rgba(41, 128, 185, 0.3);
+}
+
+/* Botón LINTERNA */
+#boton-linterna {
+    background-color: #f39c12;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    width: 80%;
+    max-width: 300px;
+}
+
+#boton-capturar:disabled,
+#boton-linterna:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Indicador procesando */
+#procesando {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.75);
+    color: white;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    z-index: 20;
+}
+.oculto { display: none !important; }
+
+/* Contador */
+#contador {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 15px auto;
+    width: 90%;
+    max-width: 400px;
+}
+.cnt {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1rem;
+}
+.valido-cnt  { background: #d5f5e3; color: #1e8449; }
+.peligro-cnt { background: #fadbd8; color: #c0392b; }
+
+/* Historial */
+#historial-container {
+    width: 90%;
+    max-width: 400px;
+    margin: 20px auto 30px;
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: left;
+}
+#historial-container h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: #2c3e50;
+    text-align: center;
+}
+#boton-limpiar {
+    display: block;
+    margin: 0 auto 10px;
+    background: none;
+    border: 1px solid #bdc3c7;
+    color: #7f8c8d;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+#historial-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+}
+#historial-lista li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    gap: 8px;
+}
+#historial-lista li small { color: #999; white-space: nowrap; }
+.hist-valido  { background: #eafaf1; color: #1e8449; }
+.hist-peligro { background: #fdedec; color: #c0392b; }
+
 /* Estados de Alerta */
-.peligro { background-color: #e74c3c !important; color: white !important; }
-.valido { background-color: #2ecc71 !important; color: white !important; }
+.peligro     { background-color: #e74c3c !important; color: white !important; }
+.valido      { background-color: #2ecc71 !important; color: white !important; }
+.advertencia { background-color: #f39c12 !important; color: white !important; }
 
 footer {
     margin-top: 20px;

@@ -16,19 +16,17 @@
     </header>
 
     <main>
-        <div class="control-panel">
-            <label for="corte-seleccionado">Tipo de billete:</label>
-            <select id="corte-seleccionado">
-                <option value="10">Bs10 </option>
-                <option value="20">Bs20 </option>
-                <option value="50" selected>Bs50 </option>
-            </select>
+        <!-- Contador -->
+        <div id="contador">
+            <div class="cnt valido-cnt">✅ <span id="cnt-validos">0</span> Válidos</div>
+            <div class="cnt peligro-cnt">❌ <span id="cnt-invalidos">0</span> Inválidos</div>
         </div>
 
         <div id="reader-wrapper">
             <video id="reader" autoplay playsinline muted></video>
             <canvas id="canvas" style="display:none"></canvas>
             <div class="camera-guide"></div>
+            <div id="procesando" class="oculto">⏳ Procesando...</div>
         </div>
 
         <div id="resultado-container">
@@ -36,13 +34,22 @@
                 <div id="icono-estado">🔍</div>
                 <span id="mensaje-estado">Listo para escanear</span>
             </div>
-            <p class="nota-ayuda">Escanea el número de la esquina superior derecha.</p>
+            <p class="nota-ayuda">Apunta al número del billete y presiona CAPTURAR.</p>
         </div>
 
         <div class="acciones">
             <button id="boton-escanear">ENCENDER CÁMARA</button>
+            <button id="boton-capturar" disabled>📷 CAPTURAR</button>
+            <button id="boton-linterna" disabled>🔦 LINTERNA</button>
             <button id="boton-apagar" disabled>APAGAR CÁMARA</button>
             <button id="boton-manual" onclick="verificarManual()">Ingreso Manual</button>
+        </div>
+
+        <!-- Historial -->
+        <div id="historial-container">
+            <h3>Historial de escaneos</h3>
+            <button id="boton-limpiar" onclick="limpiarHistorial()">Limpiar</button>
+            <ul id="historial-lista"></ul>
         </div>
     </main>
 

@@ -26,118 +26,202 @@ const rangosInvalidos = [
 
 let streamActivo = null;
 let escaneando = false;
-let timerEscaneo = null;
+let linternaActiva = false;
 let ultimoTextoDetectado = null;
+let contValidos = 0;
+let contInvalidos = 0;
+let historial = [];
+let workerListo = false;
+let tesseractWorker = null;
 
 const botonEncender = document.getElementById('boton-escanear');
 const botonApagar   = document.getElementById('boton-apagar');
-const video  = document.getElementById('reader');
-const canvas = document.getElementById('canvas');
+const botonCapturar = document.getElementById('boton-capturar');
+const botonLinterna = document.getElementById('boton-linterna');
+const video         = document.getElementById('reader');
+const canvas        = document.getElementById('canvas');
+const procesando    = document.getElementById('procesando');
 
-// ── Encender cámara ──────────────────────────────────────────────
+// ── Inicializar worker Tesseract al cargar la página ────────────
+(async () => {
+    tesseractWorker = await Tesseract.createWorker('eng');
+    await tesseractWorker.setParameters({
+        tessedit_char_whitelist: '0123456789AB '
+    });
+    workerListo = true;
+    document.getElementById('mensaje-estado').textContent = 'Listo para escanear';
+})();
+
+// ── Encender cámara ─────────────────────────────────────────────
 botonEncender.addEventListener('click', async () => {
     if (escaneando) return;
     try {
         streamActivo = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
+            video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         video.srcObject = streamActivo;
         await video.play();
         escaneando = true;
         botonEncender.disabled = true;
-        botonApagar.disabled = false;
-        iniciarBucleEscaneo();
+        botonApagar.disabled   = false;
+        botonCapturar.disabled = false;
+        botonLinterna.disabled = false;
     } catch (err) {
         alert("Permisos de cámara denegados. Use HTTPS o configure chrome://flags.");
     }
 });
 
-// ── Apagar cámara ────────────────────────────────────────────────
+// ── Apagar cámara ───────────────────────────────────────────────
 botonApagar.addEventListener('click', () => {
-    detenerEscaneo();
-});
-
-function detenerEscaneo() {
-    if (streamActivo) {
-        streamActivo.getTracks().forEach(t => t.stop());
-        streamActivo = null;
-    }
+    if (streamActivo) streamActivo.getTracks().forEach(t => t.stop());
+    streamActivo = null;
     escaneando = false;
-    clearTimeout(timerEscaneo);
+    linternaActiva = false;
     video.srcObject = null;
     ultimoTextoDetectado = null;
     botonEncender.disabled = false;
-    botonApagar.disabled = true;
-}
+    botonApagar.disabled   = true;
+    botonCapturar.disabled = true;
+    botonLinterna.disabled = true;
+    botonLinterna.textContent = '🔦 LINTERNA';
+});
 
-// ── Bucle de escaneo con debounce (cada 1500ms) ──────────────────
-function iniciarBucleEscaneo() {
-    if (!escaneando) return;
-    timerEscaneo = setTimeout(async () => {
-        await capturarYLeer();
-        iniciarBucleEscaneo();
-    }, 1500);
-}
-
-async function capturarYLeer() {
-    if (!escaneando || video.readyState < 2) return;
+// ── Botón CAPTURAR ────────────────────────────────────────────
+botonCapturar.addEventListener('click', async () => {
+    if (!escaneando || !workerListo) return;
+    botonCapturar.disabled = true;
+    procesando.classList.remove('oculto');
     const ctx = canvas.getContext('2d');
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
     try {
-        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_char_whitelist: '0123456789AB '
-        });
-        if (text.trim()) ejecutarValidacion(text);
-    } catch (e) { /* continuar silenciosamente */ }
-}
+        const { data: { text } } = await tesseractWorker.recognize(canvas);
+        if (text.trim()) {
+            ejecutarValidacion(text);
+        } else {
+            mostrarMensajeTemp('No se detectó texto. Reintenta.');
+        }
+    } catch (e) {
+        mostrarMensajeTemp('Error al procesar imagen.');
+    } finally {
+        procesando.classList.add('oculto');
+        botonCapturar.disabled = false;
+    }
+});
 
-// ── Ingreso Manual ───────────────────────────────────────────────
+// ── Linterna ───────────────────────────────────────────────────
+botonLinterna.addEventListener('click', async () => {
+    if (!streamActivo) return;
+    const track = streamActivo.getVideoTracks()[0];
+    const caps  = track.getCapabilities();
+    if (!caps.torch) { alert('Tu dispositivo no soporta linterna.'); return; }
+    linternaActiva = !linternaActiva;
+    await track.applyConstraints({ advanced: [{ torch: linternaActiva }] });
+    botonLinterna.textContent = linternaActiva ? '🔦 APAGAR LUZ' : '🔦 LINTERNA';
+});
+
+// ── Ingreso Manual ─────────────────────────────────────────────
 function verificarManual() {
-    const entrada = prompt("Ingrese el número y serie (ej: 12345678 B):");
+    const entrada = prompt('Ingrese el número y serie (ej: 100250001 B):');
     if (entrada) ejecutarValidacion(entrada);
 }
 
-// ── Validación Unificada ─────────────────────────────────────────
+// ── Validación Unificada ────────────────────────────────────────
 function ejecutarValidacion(datoDetectado) {
     const texto = datoDetectado.toUpperCase();
     const resultadoDiv = document.getElementById('resultado-cuadro');
     const mensaje      = document.getElementById('mensaje-estado');
     const icono        = document.getElementById('icono-estado');
 
-    // Formato esperado: XXXXXXXX A/B
-    const matchBillete = texto.match(/(\d{8})\s*([AB])/);
-    if (!matchBillete) return;
+    const matchBillete = texto.match(/(\d{8,10})\s*([AB])/);
+    if (!matchBillete) { mostrarMensajeTemp('Formato no reconocido. Reintenta.'); return; }
 
-    // Debounce: ignorar si ya se procesó este mismo número
+    // Ignorar duplicados
     if (matchBillete[0] === ultimoTextoDetectado) return;
     ultimoTextoDetectado = matchBillete[0];
 
     const numeroSerie = parseInt(matchBillete[1]);
     const serie = matchBillete[2];
 
-    // 1. Serie A → siempre válido
+    if (navigator.vibrate) navigator.vibrate(100);
+
+    // Serie A → siempre válido
     if (serie === 'A') {
         icono.textContent = '✅';
-        resultadoDiv.className = "valido";
-        mensaje.innerHTML = `<b>SERIE A: BILLETE VÁLIDO</b><br>Nº ${numeroSerie}<br>Toda la Serie A mantiene plena validez legal.`;
+        resultadoDiv.className = 'valido';
+        mensaje.innerHTML = `<b>SERIE A: BILLETE VÁLIDO</b><br>Nº ${numeroSerie}<br>Plena validez legal.`;
+        agregarHistorial(numeroSerie, 'A', null, true);
+        contValidos++;
+        actualizarContador();
         return;
     }
 
-    // 2. Serie B → buscar en TODOS los cortes (auto-detección)
+    // Serie B → buscar en todos los cortes
     const rangoEncontrado = rangosInvalidos.find(r =>
         numeroSerie >= r.desde && numeroSerie <= r.hasta
     );
 
     if (rangoEncontrado) {
         icono.textContent = '❌';
-        resultadoDiv.className = "peligro";
-        mensaje.innerHTML = `<b>SIN VALOR LEGAL</b><br>Corte Bs${rangoEncontrado.corte} - Nº ${numeroSerie}<br>Serie B inhabilitada por el BCB.`;
+        resultadoDiv.className = 'peligro';
+        mensaje.innerHTML = `<b>SIN VALOR LEGAL</b><br>Bs${rangoEncontrado.corte} - Nº ${numeroSerie}<br>Serie B inhabilitada por el BCB.`;
+        agregarHistorial(numeroSerie, 'B', rangoEncontrado.corte, false);
+        contInvalidos++;
         if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
     } else {
         icono.textContent = '✅';
-        resultadoDiv.className = "valido";
-        mensaje.innerHTML = `<b>SERIE B: AUTORIZADA</b><br>Nº ${numeroSerie}<br>No se encuentra en el lote sustraído.`;
+        resultadoDiv.className = 'valido';
+        mensaje.innerHTML = `<b>SERIE B: AUTORIZADA</b><br>Nº ${numeroSerie}<br>No está en el lote sustraído.`;
+        agregarHistorial(numeroSerie, 'B', null, true);
+        contValidos++;
     }
+    actualizarContador();
+}
+
+// ── Historial ──────────────────────────────────────────────────
+function agregarHistorial(numero, serie, corte, valido) {
+    const hora = new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item = { numero, serie, corte, valido, hora };
+    historial.unshift(item);
+    renderHistorial();
+}
+
+function renderHistorial() {
+    const lista = document.getElementById('historial-lista');
+    lista.innerHTML = historial.map(h => {
+        const etiqueta = h.valido
+            ? `✅ VÁLIDO`
+            : `❌ INVÁLIDO`;
+        const detalle = h.corte ? ` (Bs${h.corte})` : '';
+        return `<li class="${h.valido ? 'hist-valido' : 'hist-peligro'}">
+            <span>${etiqueta}</span> Serie ${h.serie}${detalle} — Nº ${h.numero}
+            <small>${h.hora}</small>
+        </li>`;
+    }).join('');
+}
+
+function limpiarHistorial() {
+    historial = [];
+    contValidos = 0;
+    contInvalidos = 0;
+    ultimoTextoDetectado = null;
+    renderHistorial();
+    actualizarContador();
+}
+
+// ── Contador ───────────────────────────────────────────────────
+function actualizarContador() {
+    document.getElementById('cnt-validos').textContent  = contValidos;
+    document.getElementById('cnt-invalidos').textContent = contInvalidos;
+}
+
+// ── Feedback temporal ─────────────────────────────────────────
+function mostrarMensajeTemp(msg) {
+    const mensaje = document.getElementById('mensaje-estado');
+    const icono   = document.getElementById('icono-estado');
+    const cuadro  = document.getElementById('resultado-cuadro');
+    icono.textContent = '⚠️';
+    cuadro.className = 'advertencia';
+    mensaje.textContent = msg;
 }
